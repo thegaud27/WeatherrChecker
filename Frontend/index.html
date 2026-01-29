@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: url('weather2.jpg') no-repeat center center/cover;
+      color: #222;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      color: #000;
+      text-shadow: 1px 1px 3px rgba(255, 255, 255, 0.6);
+    }
+
+    input {
+      padding: 10px;
+      width: 280px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      outline: none;
+      margin-right: 10px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      background-color: #0078d7;
+      color: white;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background-color: #005fa3;
+    }
+
+    #weather {
+      margin-top: 25px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 20px 30px;
+      border-radius: 10px;
+      display: inline-block;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      text-align: left;
+      min-width: 250px;
+    }
+
+    .forecast {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .day {
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 10px;
+      padding: 10px 15px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      min-width: 100px;
+    }
+
+    .day h4 {
+      margin: 5px 0;
+      color: #0078d7;
+    }
+
+    .day p {
+      margin: 0;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🌤️ Weather Checker</h1>
+  
+  <div class="input-box">
+    <input type="text" id="city" placeholder="Enter city name">
+    <button onclick="getWeather()">Get Weather</button>
+  </div>
+
+  <div id="weather"></div>
+
+  <script>
+    async function getWeather() {
+      const city = document.getElementById('city').value.trim();
+      const apiKey = '5569068c0355e3b2b77604eab5c17d05'; // your key
+      const currentUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
+      const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`;
+
+      if (!city) {
+        document.getElementById('weather').innerHTML = `<p>Please enter a city name ⛅</p>`;
+        return;
+      }
+
+      try {
+        // Fetch current weather
+        const currentRes = await fetch(currentUrl);
+        const currentData = await currentRes.json();
+
+        // Fetch forecast
+        const forecastRes = await fetch(forecastUrl);
+        const forecastData = await forecastRes.json();
+
+        if (currentData.cod === 200 && forecastData.cod === "200") {
+          // Display current weather
+          let html = `
+            <h3>${currentData.name}</h3>
+            <p>🌡️ Temp: ${currentData.main.temp}°C</p>
+            <p>💧 Humidity: ${currentData.main.humidity}%</p>
+            <p>🌬️ Wind: ${currentData.wind.speed} m/s</p>
+            <p>${currentData.weather[0].description}</p>
+          `;
+
+          // Prepare 5-day forecast summary
+          html += `<div class="forecast"><h3 style="width:100%;text-align:center;">📅 5-Day Forecast</h3>`;
+
+          const dailyData = {};
+
+          // Group forecast data by date (every 3h intervals)
+          forecastData.list.forEach(item => {
+            const date = item.dt_txt.split(" ")[0];
+            if (!dailyData[date]) dailyData[date] = [];
+            dailyData[date].push(item);
+          });
+
+          // Extract average of next 5 days
+          Object.keys(dailyData).slice(0, 5).forEach(date => {
+            const temps = dailyData[date].map(d => d.main.temp);
+            const avgTemp = (temps.reduce((a,b)=>a+b,0) / temps.length).toFixed(1);
+            const desc = dailyData[date][0].weather[0].description;
+
+            html += `
+              <div class="day">
+                <h4>${date}</h4>
+                <p>🌡️ ${avgTemp}°C</p>
+                <p>${desc}</p>
+              </div>
+            `;
+          });
+
+          html += `</div>`;
+          document.getElementById('weather').innerHTML = html;
+        } else {
+          document.getElementById('weather').innerHTML = `<p>City not found 😢</p>`;
+        }
+      } catch (error) {
+        document.getElementById('weather').innerHTML = `<p>Error fetching data ❌</p>`;
+      }
+    }
+  </script>
+</body>
+</html>
